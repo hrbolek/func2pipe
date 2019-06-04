@@ -9,13 +9,17 @@ def pipesub(reducer):
     '''
     def pipesubinner(subpipe):
         @wraps(subpipe)
-        def result(generator):
-            for item in generator:
-                for data in subpipe([item]):
-                    toreturn = reducer(item, data)
-                    yield toreturn
-        return result
+        def binder(**kwargs):
+            preparedsubpipe = subpipe(**kwargs)
+            def result(generator):
+                for item in generator:
+                    for data in preparedsubpipe([item]):
+                        toreturn = reducer(item, data)
+                        yield toreturn
+            return result
+        return binder
     return pipesubinner
+
 
 def pipefind(pattern, mapper = lambda item: item.group(0), selector = lambda item: item):
     '''allows generate item from single input according to pattern
@@ -28,28 +32,22 @@ def pipefind(pattern, mapper = lambda item: item.group(0), selector = lambda ite
     '''
     def pipefindinner(subpipe):
         @wraps(subpipe)
-        def result(generator):
-            for item in subpipe(generator):
-                regexTester = ''
-                if (callable(pattern)):
-                    regexTester = re.compile(pattern(item))
-                else:
-                    regexTester = re.compile(pattern)
-                for match in regexTester.finditer(selector(item)):
-                    yield mapper(match)
-        return result
+        def binder(**kwargs):
+            preparedsubpipe = subpipe(**kwargs)
+            def result(generator):
+                for item in generator:
+                    regexTester = ''
+                    if (callable(pattern)):
+                        regexTester = re.compile(pattern(item))
+                    else:
+                        regexTester = re.compile(pattern)
+                    for match in regexTester.finditer(selector(item)):
+                        yield mapper(match)
+            return result
+        return binder
     return pipefindinner
 
 def pipeit(func):
-    '''builds pipe(generator) from simple function'''
-    @wraps(func)
-    def innerselect(generator):
-        for i in generator:
-
-            yield func(i)
-    return innerselect
-
-def pipeitwithnamedparams(func):
     '''builds pipe(generator) from simple function'''
     @wraps(func)
     def bindparams(**kwargs):
@@ -61,27 +59,33 @@ def pipeitwithnamedparams(func):
 
 def hasyield(func):
     '''
-    expected to be paired with pipeit or pipeitwithnamedparams on functions which use yield
+    expected to be paired with pipeitwithnamedparams on functions which use yield
     '''
     @wraps(func)
-    def inner(generator):
-        for items in func(generator):
-            for item in items:
-                yield item
-    return inner
+    def bindparams(**kwargs):
+        preparedfunc = func(**kwargs)
+        def inner(generator):
+            for items in preparedfunc(generator):
+                for item in items:
+                    yield item
+        return inner
+    return bindparams
 
 def pipecollecttoarray(subpipe):
     '''
     collect items form subpipe as a single array
     '''
     @wraps(subpipe)
-    def inner(generator):
-        for item in generator:
-            r = []
-            for data in subpipe([item]):
-                r += [data]
-            yield r
-    return inner
+    def binder(**kwargs):
+        preparedsubpipe = subpipe(**kwargs)
+        def result(generator):
+            for item in generator:
+                r = []
+                for data in preparedsubpipe([item]):
+                    r.append(data)
+                yield r
+        return result
+    return binder
 
 def pipeapply(method, pipe = None):
     '''
