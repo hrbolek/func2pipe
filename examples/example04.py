@@ -8,7 +8,7 @@ def letters(item):
         yield letter
 
 resultcreator = fp.createpipe([
-    letters
+    letters()
     ], closewitharray = True)
 
 

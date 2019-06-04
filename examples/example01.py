@@ -1,16 +1,15 @@
 import func2pipe as fp
 
-
 @fp.pipeit
 def addone(item):
     return item + 1
 
-@fp.pipeitwithnamedparams
+@fp.pipeit
 def add(a, b):
     return a + b
 
 resultcreator = fp.createpipe([
-    addone,
+    addone(),
     add(b = 4),
     ], closewitharray = True)
 

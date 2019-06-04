@@ -1,11 +1,10 @@
 import func2pipe as fp
 
-
 @fp.pipeit
 def addone(item):
     return item + 1
 
-@fp.pipeitwithnamedparams
+@fp.pipeit
 def add(a, b):
     return a + b
 
@@ -17,10 +16,18 @@ def transform(item):
     else:
         return False
 
+@fp.pipesub(lambda input, output: {'i': input, **output})
+@fp.pipeit
+def transform2(item, fixed):
+    if (item > 12):
+        return {'r': True, 'f': fixed }
+    else:
+        return {'r': False, 'f': fixed }
+
 resultcreator = fp.createpipe([
-    addone,
+    addone(),
     add(b = 4),
-    transform
+    transform2(fixed = 'fixed')
     ], closewitharray = True)
 
 sourceA = iter(range(1, 20))

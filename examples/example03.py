@@ -2,12 +2,12 @@ import func2pipe as fp
 
 @fp.hasyield
 @fp.pipeit
-def letters(item):
+def letters(item, spec):
     for letter in item:
-        yield letter
+        yield letter + spec
 
 resultcreator = fp.createpipe([
-    letters
+    letters(spec = '-')
     ], closewitharray = True)
 
 

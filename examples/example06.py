@@ -3,11 +3,12 @@ import func2pipe as fp
 @fp.pipesub(lambda input, output: {'source': input, 'letters': output })
 @fp.pipecollecttoarray
 @fp.pipefind(r"[A-Z]", mapper = lambda item: item.group(0))
-def letters(item):
-    return item
+@fp.pipeit
+def letters(item, b):
+    return item + b
 
 resultcreator = fp.createpipe([
-    letters
+    letters(b = 'x')
     ], closewitharray = True)
 
 
