@@ -178,3 +178,92 @@ print('second set')
 result = resultcreator(sourceB)
 print(result)
 ```
+
+### Example GR
+```python
+import func2pipe as fp
+
+@fp.pipeit
+def record_A(item):
+    return {**item, 'label': 'A'}
+
+@fp.pipeit
+def record_B(item):
+    return {**item, 'label': 'B'}
+
+@fp.pipeit
+def record_C(item):
+    return {**item, 'label': 'C'}
+
+@fp.hasyield
+@fp.pipeit
+def relation_A_B(item):
+    id = item['id']
+    relace = [
+        {'s': '1', 'd': '2'},
+        {'s': '1', 'd': '3'},
+        {'s': '2', 'd': '3'},
+        ]
+    for r in relace:
+        if r['s'] == id:
+            yield {'id': r['d']}
+
+@fp.hasyield
+@fp.pipeit
+def relation_B_C(item):
+    id = item['id']
+    relace = [
+        {'s': '1', 'd': '2'},
+        {'s': '1', 'd': '3'},
+        {'s': '2', 'd': '3'},
+        ]
+    for r in relace:
+        if r['s'] == id:
+            yield {'id': r['d']}
+    
+graph = {
+    'nodes': {
+        'A': record_A(),
+        'B': record_B(),
+        'C': record_C()
+        },
+    'edges': [
+        {'from': 'A', 'to': 'B', 'relation': relation_A_B()},
+        {'from': 'B', 'to': 'C', 'relation': relation_B_C()},
+        ]
+    }
+
+
+def builder(graph, currentnode, filterq = lambda item: True):
+    descriptorpipe = graph['nodes'][currentnode]
+
+    def x(relation):
+        relationpipe = relation['relation']
+        filterq = lambda item: True;
+        if ('filter' in relation):
+            filterq = relation['filter']
+
+        sub = builder(graph, relation['to'], filterq)
+        return fp.createpipe([relationpipe, sub])
+
+    relations = filter(lambda item: item['from'] == currentnode, graph['edges'])
+    relationsresult = {}
+    for relation in relations:
+        itemname = relation['to']
+        if ('itemname' in relation):
+            itemname = relation['itemname']
+        relationsresult[itemname] = fp.createpipe([x(relation)], closewitharray = True)
+
+    @fp.pipeit
+    def userelations(item):
+        result = { **item }
+        for key in relationsresult.keys():
+            result[key] = relationsresult[key]([item])
+        return result
+
+    return fp.createpipe([descriptorpipe, userelations()], closewitharray = True)
+
+bba = builder(graph, 'A')
+result = bba([{'id': '1'}])
+print(result)
+```
