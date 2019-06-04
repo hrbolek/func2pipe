@@ -9,12 +9,12 @@ import func2pipe as fp
 def addone(item):
     return item + 1
 
-@fp.pipeitwithnamedparams
+@fp.pipeit
 def add(a, b):
     return a + b
 
 resultcreator = fp.createpipe([
-    addone,
+    addone(),
     add(b = 4),
     ], closewitharray = True)
 
@@ -37,7 +37,7 @@ import func2pipe as fp
 def addone(item):
     return item + 1
 
-@fp.pipeitwithnamedparams
+@fp.pipeit
 def add(a, b):
     return a + b
 
@@ -49,10 +49,18 @@ def transform(item):
     else:
         return False
 
+@fp.pipesub(lambda input, output: {'i': input, **output})
+@fp.pipeit
+def transform2(item, fixed):
+    if (item > 12):
+        return {'r': True, 'f': fixed }
+    else:
+        return {'r': False, 'f': fixed }
+
 resultcreator = fp.createpipe([
-    addone,
+    addone(),
     add(b = 4),
-    transform
+    transform2(fixed = 'fixed')
     ], closewitharray = True)
 
 sourceA = iter(range(1, 20))
@@ -71,12 +79,12 @@ import func2pipe as fp
 
 @fp.hasyield
 @fp.pipeit
-def letters(item):
+def letters(item, spec):
     for letter in item:
-        yield letter
+        yield letter + spec
 
 resultcreator = fp.createpipe([
-    letters
+    letters(spec = '-')
     ], closewitharray = True)
 
 
@@ -103,7 +111,7 @@ def letters(item):
         yield letter
 
 resultcreator = fp.createpipe([
-    letters
+    letters()
     ], closewitharray = True)
 
 
@@ -124,11 +132,12 @@ import func2pipe as fp
 
 @fp.pipesub(lambda input, output: {'source': input, 'letter': output })
 @fp.pipefind(r"[A-Z]", mapper = lambda item: item.group(0))
-def letters(item):
-    return item
+@fp.pipeit
+def letters(item, append):
+    return item + append
 
 resultcreator = fp.createpipe([
-    letters
+    letters(append = 'x')
     ], closewitharray = True)
 
 
@@ -150,11 +159,12 @@ import func2pipe as fp
 @fp.pipesub(lambda input, output: {'source': input, 'letters': output })
 @fp.pipecollecttoarray
 @fp.pipefind(r"[A-Z]", mapper = lambda item: item.group(0))
-def letters(item):
-    return item
+@fp.pipeit
+def letters(item, b):
+    return item + b
 
 resultcreator = fp.createpipe([
-    letters
+    letters(b = 'x')
     ], closewitharray = True)
 
 
