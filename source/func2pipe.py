@@ -35,7 +35,7 @@ def pipefind(pattern, mapper = lambda item: item.group(0), selector = lambda ite
         def binder(**kwargs):
             preparedsubpipe = subpipe(**kwargs)
             def result(generator):
-                for item in generator:
+                for item in preparedsubpipe(generator):
                     regexTester = ''
                     if (callable(pattern)):
                         regexTester = re.compile(pattern(item))
