@@ -1,7 +1,7 @@
 from functools import partial, wraps
 import re
 
-def pipesub(reducer):
+def pipesub_(reducer):
     '''declare pipe as subroutine, allows reduce input and output into one item by reducer
     
     Keyword arguments:
@@ -16,6 +16,28 @@ def pipesub(reducer):
                     for data in preparedsubpipe([item]):
                         toreturn = reducer(item, data)
                         yield toreturn
+            return result
+        return binder
+    return pipesubinner
+
+def pipesub(reducer):
+    '''declare pipe as subroutine, allows reduce input and output into one item by reducer
+    
+    Keyword arguments:
+    reducer -- lambda item, result: {**item, 'result': result}
+    '''
+    def pipesubinner(subpipe):
+        @wraps(subpipe)
+        def binder(**kwargs):
+            preparedsubpipe = subpipe(**kwargs)
+            def result(generator):
+                buffer = {'currentItem': None}
+                def bufferit(gen):
+                    for item in gen:
+                        buffer['currentItem'] = item
+                        yield item
+                for item in preparedsubpipe(bufferit(generator)):
+                    yield reducer(buffer['currentItem'], item)
             return result
         return binder
     return pipesubinner
@@ -47,33 +69,95 @@ def pipefind(pattern, mapper = lambda item: item.group(0), selector = lambda ite
         return binder
     return pipefindinner
 
-def pipeit(func):
-    '''builds pipe(generator) from simple function'''
-    @wraps(func)
-    def bindparams(**kwargs):
-        def innerselect(generator):
-            for i in generator:
-                yield func(i, **kwargs)
-        return innerselect
-    return bindparams
+def pipeit(with_yield = False, with_state = False):
+    def pipeitsimple(func):
+        '''builds pipe(generator) from simple function'''
+        @wraps(func)
+        def bindparams(**kwargs):
+            def innerselect(generator):
+                for i in generator:
+                    yield func(i, **kwargs)
+            return innerselect
+        return bindparams
 
-def hasyield(func):
+    if (not with_yield) & (not with_state):
+        return pipeitsimple
+    
+    preparedfunc = lambda func: func
+    def hasyield(func):
+        '''
+        expected to be paired with pipeitwithnamedparams on functions which use yield
+        '''
+        @wraps(func)
+        def bindparams(**kwargs):
+            preparedfunc = func(**kwargs)
+            def inner(generator):
+                for items in preparedfunc(generator):
+                    for item in items:
+                        yield item
+            return inner
+        return bindparams
+
+    if (with_yield) & (not with_state):
+        result = lambda func: hasyield(pipeitsimple(func))
+        return result
+
+    def pipeitwithstate(func):
+        '''builds pipe(generator) from simple function'''
+        @wraps(func)
+        def bindparams(**kwargs):
+            def innerselect(generator):
+                state = None
+                initState = True
+                for i in generator:
+                    result = None
+                    if (initState):
+                        result, state = func(i, **kwargs)
+                        initState = False
+                    else:
+                        result, state = func(i, state = state, **kwargs)
+                    yield result
+
+            return innerselect
+        return bindparams
+    if (not with_yield) & with_state:
+        return pipeitwithstate
+
     '''
-    expected to be paired with pipeitwithnamedparams on functions which use yield
+                buffer = {'currentItem': None}
+                def bufferit(gen):
+                    for item in gen:
+                        buffer['currentItem'] = item
+                        yield item
+
     '''
-    @wraps(func)
-    def bindparams(**kwargs):
-        preparedfunc = func(**kwargs)
-        def inner(generator):
-            for items in preparedfunc(generator):
-                for item in items:
-                    yield item
-        return inner
-    return bindparams
+
+    def pipeitwithstatewithyield(func):
+        '''builds pipe(generator) from simple function'''
+        @wraps(func)
+        def bindparams(**kwargs):
+            def innerselect(generator):
+                state = None
+                initState = True
+                for i in generator:
+                    result = None
+                    if (initState):
+                        for result, statel in func(i, **kwargs):
+                            state = statel
+                            yield result
+                        initState = False
+                    else:
+                        for result, statel in func(i, state = state, **kwargs):
+                            state = statel
+                            yield result
+
+            return innerselect
+        return bindparams
+    return pipeitwithstatewithyield
 
 def pipecollecttoarray(subpipe):
     '''
-    collect items form subpipe as a single array
+    collect items from subpipe as a single array
     '''
     @wraps(subpipe)
     def binder(**kwargs):
@@ -130,7 +214,7 @@ def closewithresults(pipe):
         result.append(item)
     return result
 
-def filter(func = lambda item: True):
+def filter2(func = lambda item: True):
     '''
     returns function for filtering items in generator
     '''
@@ -140,15 +224,15 @@ def filter(func = lambda item: True):
                 yield item
     return innerfilter
 
-def select(func = lambda item: item):
-    '''
-    this function is simplier form of
 
-    @pipeit
-    def select(item)
-        return func(item)
+@pipeit(with_yield = True)
+def filter(item, funcfilter = lambda item: True):
     '''
-    def innerselect(generator):
-        for item in generator:
-            yield func(item)
-    return innerselect
+    function for filtering items in generator
+    '''
+    if (funcfilter(item)):
+        yield item
+
+@pipeit()
+def select(item, func = lambda item: item):
+    return func(item)
