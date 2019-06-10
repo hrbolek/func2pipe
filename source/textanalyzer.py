@@ -12,15 +12,22 @@ def intocolumns(line, separator):
     return result
 
 @fp.pipeit()
-def intotext(cols, separator):
-    result = reduce(lambda x, y: x + separator + y, cols.values())
+def intotext(cols, separator, colnames = []):
+    result = ''
+    if len(colnames) > 0:
+        l = []
+        for colname in colnames:
+            l.append(cols[colname])
+        result = reduce(lambda x, y: x + separator + y, l)
+    else:
+        result = reduce(lambda x, y: x + separator + y, cols.values())
     return result
 
 @fp.pipeit()
 def namecols(cols, names):
     result = {}
-    for nn in zip(names, range(0, 100)):
-        result[nn[0]] = cols[nn[1]]
+    for name, index in zip(names, range(0, len(cols))):
+        result[name] = cols[index]
     return result
 
 @fp.pipeit()
@@ -29,10 +36,11 @@ def addcol(cols, name, func):
     return result
 
 @fp.pipeit()
-def removecol(cols, name):
+def removecols(cols, names):
     result = { **cols }
-    if name in result:
-        del result[name]
+    for name in names:
+        if name in result:
+            del result[name]
     return result
 
 @fp.pipeit()

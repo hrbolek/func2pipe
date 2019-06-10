@@ -144,12 +144,14 @@ def pipeit(with_yield = False, with_state = False):
                     if (initState):
                         for result, statel in func(i, **kwargs):
                             state = statel
-                            yield result
-                        initState = False
+                            initState = False
+                            if not result == None:
+                                yield result
                     else:
                         for result, statel in func(i, state = state, **kwargs):
                             state = statel
-                            yield result
+                            if not result == None:
+                                yield result
 
             return innerselect
         return bindparams
